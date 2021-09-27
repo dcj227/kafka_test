@@ -11,8 +11,11 @@ import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MyProducer {
+    private static Logger log = LoggerFactory.getLogger(MyProducer.class);
     private final String CONF_PROPERTIES_FILE = "conf.properties";
     private final String PRODUCER_PROPERTIES_FILE = "producer.properties";
 
@@ -25,9 +28,11 @@ public class MyProducer {
     public MyProducer() throws Exception {
         confProps = new Properties();
         confProps.load(new FileInputStream(CONF_PROPERTIES_FILE));
+        log.info("confProps:{}", confProps.toString());
 
         kafkaProps = new Properties();
         kafkaProps.load(new FileInputStream(PRODUCER_PROPERTIES_FILE));
+        log.info("kafkaProps:{}", kafkaProps.toString());
 
         producer = new KafkaProducer<>(kafkaProps);
     }
@@ -57,6 +62,7 @@ public class MyProducer {
                         confLastModifyMill = tmpConfModifyMill;
 
                         confProps.load(new FileInputStream(file));
+                        log.info("confProps:{}", confProps.toString());
 
                         topic = confProps.getProperty("topicName", topic);
 
@@ -97,11 +103,12 @@ public class MyProducer {
                         count++;
 
                         if (totalSend > 0 && count >= totalSend) {
+                            log.info("already send {} msg then return.", totalSend);
                             return;
                         }
                     }
                 } catch (InterruptedException | ExecutionException e) {
-                    e.printStackTrace();
+                    log.error("msg:", e);
                 } finally {
                     lastSendMicro = nowMicro;
 
