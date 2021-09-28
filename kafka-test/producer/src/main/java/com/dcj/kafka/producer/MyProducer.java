@@ -41,18 +41,18 @@ public class MyProducer {
         long lastConfReloadS = 0;
         long confLastModifyMill = 0;
 
-        long lastSendMicro = 0;
+        long lastSendMilli = 0;
         int curSendSize = 0;
         int totalSend = 0;
 
-        String topic = "topic_test";
+        String topic = "test1";
         String key = "test_";
         String msg = "1";
 
         int count = 0;
         while (true) {
-            long nowMicro = System.currentTimeMillis() / 1000;
-            long nowS = nowMicro / 1000;
+            long nowMilli = System.currentTimeMillis();
+            long nowS = nowMilli / 1000;
 
             if (nowS > lastConfReloadS && nowS - lastConfReloadS > confReloadIntervalS ) {
                 try {
@@ -93,30 +93,39 @@ public class MyProducer {
 
             int sendSpec = Integer.parseInt(confProps.getProperty("specIntervalMicro", "100"));
             int qps = Integer.parseInt(confProps.getProperty("qps", "100"));
-            int sendCount = qps / sendSpec;
-            if (nowMicro > lastSendMicro && nowMicro - lastSendMicro > sendSpec) {
+            int sendCount = qps * sendSpec / 1000;
+            if (sendCount <= 0) {
+                sendCount = 1;
+            }
+            //log.info("nowMicro:{} lastSendMicro:{}", nowMilli, lastSendMilli);
+            if (nowMilli > lastSendMilli && nowMilli - lastSendMilli > sendSpec) {
+                boolean isReturn = false;
                 try {
                     for (int i = 0; i < sendCount; i++) {
                         key += Integer.toString(i);
                         producer.send(new ProducerRecord<>(topic, key, msg)).get();
 
                         count++;
+                        log.info("send: {}", count);
 
                         if (totalSend > 0 && count >= totalSend) {
-                            log.info("already send {} msg then return.", totalSend);
-                            return;
+                            log.info("already send {} msg then return.", count);
+                            isReturn = true;
                         }
                     }
                 } catch (InterruptedException | ExecutionException e) {
                     log.error("msg:", e);
                 } finally {
-                    lastSendMicro = nowMicro;
+                    lastSendMilli = nowMilli;
+
+                    if (isReturn) {
+                        return;
+                    }
 
                     continue;
                 }
             }
-
-            TimeUnit.MILLISECONDS.sleep(10);
+            TimeUnit.MILLISECONDS.sleep(1);
         }
     }
 }
